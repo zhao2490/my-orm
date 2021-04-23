@@ -3,12 +3,14 @@ package engine
 import (
 	"database/sql"
 
+	"github.com/zhao2490/my-orm/dialect"
 	"github.com/zhao2490/my-orm/log"
 	"github.com/zhao2490/my-orm/session"
 )
 
 type Engine struct {
-	db *sql.DB
+	db      *sql.DB
+	dialect dialect.Dialect
 }
 
 func NewEngine(driver, source string) (e *Engine, err error) {
@@ -17,7 +19,16 @@ func NewEngine(driver, source string) (e *Engine, err error) {
 		log.Error(err)
 		return
 	}
-	e = &Engine{db: db}
+	if err = db.Ping(); err != nil {
+		log.Error(err)
+		return
+	}
+	dial, ok := dialect.GetDialect(driver)
+	if !ok {
+		log.Errorf("can't got dialect for %s", driver)
+		return
+	}
+	e = &Engine{db: db, dialect: dial}
 	log.Info("Connect database success")
 	return
 }
@@ -30,5 +41,5 @@ func (engine *Engine) Close() {
 }
 
 func (engine *Engine) NewSession() *session.Session {
-	return session.New(engine.db)
+	return session.New(engine.db, engine.dialect)
 }

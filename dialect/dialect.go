@@ -17,4 +17,3 @@ func GetDialect(name string) (dialect Dialect, ok bool) {
 	dialect, ok = dialectsMap[name]
 	return
 }
-

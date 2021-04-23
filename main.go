@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"log"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
-	db, err := sql.Open("mysql", "identifier.sqllite")
+	db, err := sql.Open("sqlite3", "myorm.db")
 	if err != nil {
 		log.Fatal(err)
 	}
