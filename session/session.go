@@ -15,11 +15,22 @@ import (
 type Session struct {
 	db       *sql.DB
 	dialect  dialect.Dialect
+	tx       *sql.Tx // for transactions, tx.Exec if tx is not nil, otherwise db do;
 	refTable *schema.Schema
 	clause   clause.Clause
 	sql      strings.Builder
 	sqlVars  []interface{}
 }
+
+// CommonDB is a minimal function set of db
+type CommonDB interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
+
+var _ CommonDB = (*sql.DB)(nil)
+var _ CommonDB = (*sql.Tx)(nil)
 
 func New(db *sql.DB, dial dialect.Dialect) *Session {
 	return &Session{db: db, dialect: dial}
@@ -31,7 +42,11 @@ func (s *Session) Clear() {
 	s.clause = clause.Clause{}
 }
 
-func (s *Session) DB() *sql.DB {
+// DB returns tx if a tx begins. otherwise return *sql.DB
+func (s *Session) DB() CommonDB {
+	if s.tx != nil {
+		return s.tx
+	}
 	return s.db
 }
 
@@ -113,4 +128,29 @@ func (s *Session) HasTable() bool {
 		return false
 	}
 	return tmp == s.RefTable().Name
+}
+
+func (s *Session) Begin() (err error) {
+	log.Info("transaction begin")
+	if s.tx, err = s.db.Begin(); err != nil {
+		log.Error(err)
+		return err
+	}
+	return
+}
+
+func (s *Session) Commit() (err error) {
+	log.Info("transaction commit")
+	if err = s.tx.Commit(); err != nil {
+		log.Error(err)
+	}
+	return
+}
+
+func (s *Session) Rollback() (err error) {
+	log.Info("transaction rollback")
+	if err = s.tx.Rollback(); err != nil {
+		log.Error(err)
+	}
+	return
 }
