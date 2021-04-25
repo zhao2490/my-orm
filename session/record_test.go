@@ -69,3 +69,36 @@ func TestSession_Find(t *testing.T) {
 	}
 	t.Log(users)
 }
+
+func TestSession_Limit(t *testing.T) {
+	s := testRecordInit(t)
+	var users []User
+	err := s.Limit(1).Find(&users)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("result = %+v", users)
+}
+
+func TestSession_Update(t *testing.T) {
+	s := testRecordInit(t)
+	affected, _ := s.Where("Name = ?", "tom").Update("Age", 30)
+	u := &User{}
+	_ = s.OrderBy("Age DESC").First(u)
+
+	if affected != 1 || u.Age != 30 {
+		t.Fatal("failed to update")
+	}
+}
+
+func TestSession_DeleteAndCount(t *testing.T) {
+	s := testRecordInit(t)
+	affected, _ := s.Where("Name = ?", "tom").Delete()
+	if affected != 1 {
+		t.Fatal("failed to delete")
+	}
+	count, _ := s.Count()
+	if count != 1 {
+		t.Fatal("failed to count")
+	}
+}
